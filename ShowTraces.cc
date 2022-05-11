@@ -25,7 +25,7 @@ void Unpack(int* ,TraceEvent*);
 
 
 int main(int argc, char** argv){
-  TGo4EventSource* source= new TGo4MbsFile("/u/kwimmer/lustre/despec/s450/s450f0009_0001.lmd");
+  TGo4EventSource* source= new TGo4MbsFile("/u/kwimmer/lustre/despec/s450/s450f0011_0001.lmd");
   TGo4MbsEvent* event = new TGo4MbsEvent();
   event->SetEventSource(source);
   event->Init();
@@ -38,10 +38,10 @@ int main(int argc, char** argv){
   tree->BranchRef();
   
   TGo4MbsSubEvent* psubevt = new TGo4MbsSubEvent();
-  for(int i =0; i <10;i++){
+  for(int i =0; i <100;i++){
     int errmes = event->Fill();
-    cout << "event->Fill() " << errmes << endl;
-    cout << "event->GetCount() " << event->GetCount() << endl;
+    //cout << "event->Fill() " << errmes << endl;
+    //cout << "event->GetCount() " << event->GetCount() << endl;
     event->ResetIterator();
     int subevent_ctr = 0;
     Int_t* p = 0;
@@ -54,25 +54,25 @@ int main(int argc, char** argv){
       len = psubevt->GetIntLen();
       ID = psubevt->GetProcid();
       sub_len = (psubevt->GetDlen() - 2) / 2;
-      cout << (hex) << "ID " << ID << "\t" << (dec) << ID << endl;
-      cout << (hex) << "len " << len << "\t" << (dec) << len << endl;
-      cout << (hex) << "sub_len " << sub_len << "\t" << (dec) << sub_len << endl;
+      //cout << (hex) << "ID " << ID << "\t" << (dec) << ID << endl;
+      //cout << (hex) << "len " << len << "\t" << (dec) << len << endl;
+      //cout << (hex) << "sub_len " << sub_len << "\t" << (dec) << sub_len << endl;
       if(ID == GEID){
     	//psubevt->PrintEvent();
     	//psubevt->PrintMbsSubevent();
-    	cout << "--------------------------------" << endl;
+    	//cout << "--------------------------------" << endl;
     	trEvent->Clear();
     	p = UnpackWR(p,trEvent);
-    	cout << "WR TS = " << trEvent->GetWhiteRabbit() << endl;
+    	//cout << "WR TS = " << trEvent->GetWhiteRabbit() << endl;
     	Unpack(p,trEvent);
-	cout << "fill " << endl;
+	//cout << "fill " << endl;
 	tree->Fill();
     	psubevt->Clear();
       }
       cout << "subevent_ctr " << ++subevent_ctr << endl;
       psubevt->Clear();
     }// sub event
-    cout << "i\t" << i << endl;
+    //cout << "i\t" << i << endl;
   }// event loop
   cout << "end " << endl;
   ofile->cd();
@@ -154,7 +154,7 @@ void Unpack(int* p, TraceEvent* tr){
 	}
 	traces.at(i).SetBoard(board);
 	traces.at(i).SetChn(chID);
-	cout << "energy " << endl;
+	//cout << "energy " << endl;
 	p++;
 	FEBEX_TS *fbx_Ch_TS=(FEBEX_TS*) p;
 	ULong64_t tmp_ext_chan_ts = (fbx_Ch->ext_chan_ts);
@@ -177,7 +177,7 @@ void Unpack(int* p, TraceEvent* tr){
 	p++;
 	if((*p & 0xFF) == 0x00000034){
 	  p++;
-	  cout << "trace" << endl;
+	  //cout << "trace" << endl;
 	  int tracesize = *p++;
 	  int tracehead = *p++;
 	  //cout << "size " << tracesize << " head " << tracehead << (hex) << " = " << tracehead << (dec) << endl;
