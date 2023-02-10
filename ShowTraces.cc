@@ -13,25 +13,45 @@
 #include "TGo4MbsEvent.h"
 #include "TGo4MbsSubEvent.h"
 
+#include "CommandLineInterface.hh"
+
 // febex structs
 #include "FEBEX.h"
 #include "Trace.hh"
 
-#define GEID 60
-#define FEBEX_MODULES 4
 
 int* UnpackWR(int*, TraceEvent*);
 void Unpack(int* ,TraceEvent*);
+int checkWR[4] = {0x3e1, 0x4e1, 0x5e1, 0x6e1};
 
 
 int main(int argc, char** argv){
-  TGo4EventSource* source= new TGo4MbsFile("/u/kwimmer/lustre/despec/s450/s450f0011_0001.lmd");
+
+  char* InputFile = NULL;
+  char* OutputFile = NULL;
+  int vl = 0;
+  
+  CommandLineInterface* interface = new CommandLineInterface();
+
+  interface->Add("-i", "inputfile", &InputFile);
+  interface->Add("-o", "outputfile", &OutputFile);
+  interface->Add("-v", "verbose", &vl);
+  interface->CheckFlags(argc, argv);
+
+  if(InputFile == NULL || OutputFile == NULL){
+    cerr<<"You have to provide at least the input file and the output file!"<<endl;
+    exit(1);
+  }
+  cout<<"input file: " << InputFile <<endl;
+  cout<<"output file: "<<OutputFile<< endl;
+  
+  TGo4EventSource* source= new TGo4MbsFile(InputFile);
   TGo4MbsEvent* event = new TGo4MbsEvent();
   event->SetEventSource(source);
   event->Init();
   event->ResetIterator();
   
-  TFile *ofile = new TFile("tracetest.root","RECREATE");
+  TFile *ofile = new TFile(OutputFile,"RECREATE");
   TTree* tree = new TTree("tr","Traces");
   TraceEvent * trEvent = new TraceEvent();
   tree->Branch("trEvent",&trEvent, 320000);
@@ -54,22 +74,29 @@ int main(int argc, char** argv){
       len = psubevt->GetIntLen();
       ID = psubevt->GetProcid();
       sub_len = (psubevt->GetDlen() - 2) / 2;
-      //cout << (hex) << "ID " << ID << "\t" << (dec) << ID << endl;
-      //cout << (hex) << "len " << len << "\t" << (dec) << len << endl;
-      //cout << (hex) << "sub_len " << sub_len << "\t" << (dec) << sub_len << endl;
+      if(vl>2){
+	cout << (hex) << "ID " << ID << "\t" << (dec) << ID << endl;
+	cout << (hex) << "len " << len << "\t" << (dec) << len << endl;
+	cout << (hex) << "sub_len " << sub_len << "\t" << (dec) << sub_len << endl;
+      }
       if(ID == GEID){
-    	//psubevt->PrintEvent();
-    	//psubevt->PrintMbsSubevent();
-    	//cout << "--------------------------------" << endl;
+	if(vl>1){
+	  psubevt->PrintEvent();
+	  psubevt->PrintMbsSubevent();
+	  cout << "--------------------------------" << endl;
+	}
     	trEvent->Clear();
-    	p = UnpackWR(p,trEvent);
-    	//cout << "WR TS = " << trEvent->GetWhiteRabbit() << endl;
+	if(withWR){
+	  p = UnpackWR(p,trEvent);
+	  if(vl>1)
+	    cout << "WR TS = " << trEvent->GetWhiteRabbit() << endl;
+	}
     	Unpack(p,trEvent);
 	//cout << "fill " << endl;
 	tree->Fill();
     	psubevt->Clear();
       }
-      cout << "subevent_ctr " << ++subevent_ctr << endl;
+      //cout << "subevent_ctr " << ++subevent_ctr << endl;
       psubevt->Clear();
     }// sub event
     //cout << "i\t" << i << endl;
@@ -84,16 +111,25 @@ int main(int argc, char** argv){
 
 int* UnpackWR(int *p, TraceEvent* tr){
   // detector ID
-  p++;
+  int id = *p++;
+  //cout << "ID :" << (hex) << *p << "\t" << (dec) << *p << endl; 
+
   // 4 words TS
   ULong64_t timestamp[4];
+  int check[4];
   for(int i=0;i<4;i++){
-    timestamp[i] = (ULong64_t)*p;
+    //cout << "i : " << (hex) << *p << "\t" << (dec) << *p << "\t " << (hex) << (*p & 0xffff0000) << "\t"<< (dec) << (*p & 0xffff0000) << "\t"<< (hex) << (*p & 0x0000ffff) << "\t"<< (dec) << (*p & 0x0000ffff) << endl;
+    check[i] = (ULong64_t)(*p & 0xffff0000) >> 16;
+    if(check[i] != checkWR[i])
+      return 0;
+    timestamp[i] = (ULong64_t)(*p & 0x0000ffff);
     p++;
   }
-  // cout << (hex) << *p << "\t" << (dec) << *p << endl;
-  tr->SetWhiteRabbit(timestamp[0] + (timestamp[1] << 16) + (timestamp[1] << 32) + (timestamp[1] << 48));
+  //cout << (hex) << *p << "\t" << (dec) << *p << endl;
+
+  tr->SetWhiteRabbit(timestamp[0] + (timestamp[1] << 16) + (timestamp[2] << 32) + (timestamp[3] << 48));
   return p;
+  
 }
 
 void Unpack(int* p, TraceEvent* tr){
@@ -120,6 +156,7 @@ void Unpack(int* p, TraceEvent* tr){
       p++;
       FEBEX_Chan_Size *fbx_size=(FEBEX_Chan_Size*) p;
       nchan = ((fbx_size->chan_size)/4) - 1;
+      //cout << "nchan " << nchan << endl;
       if(nchan == 0)
 	nmod--;
 
@@ -148,10 +185,11 @@ void Unpack(int* p, TraceEvent* tr){
 	FEBEX_Chan_Header *fbx_Ch=(FEBEX_Chan_Header*) p;
 	int chID = fbx_Ch->Ch_ID;
 	if(board<0){
-	  cout << "something wrong, dont have the board ID " << endl;
+	  cout << "something wrong, don't have the board ID " << endl;
 	  p+=3;
 	  continue;
 	}
+	//cout << "board " << board << ", chID " << chID << endl;
 	traces.at(i).SetBoard(board);
 	traces.at(i).SetChn(chID);
 	//cout << "energy " << endl;
@@ -173,6 +211,7 @@ void Unpack(int* p, TraceEvent* tr){
       }// nchan
       nmod--;
       // now comes the traces
+      //cout << "nmod " << nmod << endl;
       for(int i=0;i<nchan;i++){
 	p++;
 	if((*p & 0xFF) == 0x00000034){

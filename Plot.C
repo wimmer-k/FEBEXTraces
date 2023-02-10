@@ -11,7 +11,7 @@
 #include "TH2F.h"
 #include "TF1.h"
 
-#include "/u/kwimmer/progs/Traces/inc/Trace.hh"
+#include "/u/kwimmer/progs/MBS_Unpack/inc/Trace.hh"
 
 void ViewTrace(int n){
 
@@ -31,8 +31,8 @@ void ViewTrace(int n){
       cout << "bad trace, aborting" << endl;
       continue;
     }
-    int data[2000];
-    int x[2000];
+    int data[4000];
+    int x[4000];
     
     for(int i=0;i<trace->GetLength();i++){
       x[i] = i;

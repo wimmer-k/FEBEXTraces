@@ -4,6 +4,7 @@
 
 BIN_DIR = $(BASEDIR)/bin
 LIB_DIR = $(BASEDIR)/lib
+COMMON_DIR = $(BASEDIR)/progs/common
 
 GO4_DIR = /cvmfs/eel.gsi.de/debian10-x86_64/go4/602-00
 ROOTCFLAGS  := $(shell root-config --cflags)
@@ -14,9 +15,9 @@ ROOTINC     := -I$(shell root-config --incdir)
 CPP         = g++
 CFLAGS	    = -Wall -Wno-long-long -g -O3 $(ROOTCFLAGS) -fPIC -D_FILE_OFFSET_BITS=64 -MMD
 
-INCLUDES    = -I./inc -I$(GO4_DIR)/include/
+INCLUDES    = -I./inc -I$(GO4_DIR)/include/ -I$(COMMON_DIR)
 BASELIBS    = -lm $(ROOTLIBS) $(ROOTGLIBS) -L$(LIB_DIR) -L$(GO4_DIR)/lib/ 
-LIBS  	    =  $(BASELIBS) -lGo4AnalBase -lGo4Analysis -lGo4Base -lGo4TaskHandler -lFEBEX
+LIBS  	    =  $(BASELIBS) -lCommandLineInterface -lGo4AnalBase -lGo4Analysis -lGo4Base -lGo4TaskHandler -lFEBEX
 
 LFLAGS	    = -g -fPIC -shared
 CFLAGS 	    += -Wl,--no-as-needed $(SWITCH)
@@ -38,6 +39,10 @@ O_FILES = build/Trace.o build/TraceDictionary.o
 all: $(EXTRAS) $(LIB_DIR)/libFEBEX.so ShowTraces
 
 ShowTraces: ShowTraces.cc $(LIB_DIR)/libFEBEX.so
+	@echo "Compiling $@"
+	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) -o $(BIN_DIR)/$@ 
+
+WhiteRabbits: WhiteRabbits.cc 
 	@echo "Compiling $@"
 	@$(CPP) $(CFLAGS) $(INCLUDES) $< $(LIBS) -o $(BIN_DIR)/$@ 
 
